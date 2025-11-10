@@ -6,6 +6,7 @@ import numpy as np
 from time import sleep
 from geometry import Vertex
 import subprocess
+from scipy import ndimage
 
 
 class ImageProcessor:
@@ -13,13 +14,14 @@ class ImageProcessor:
     def __init__(self):
         self.tlp = (521.0, 250.0)
         self.trp = (1205.0, 195.0)
-        self.brp = (1205.0, 800.0)
-        self.blp = (521.0, 855.0)
+        self.brp = (1205.0, 790.0)
+        self.blp = (521.0, 845.0)
         self.center_column = 352.0
     
     def capture_image(self, filename='lineDetection.jpg'):
         """Capture an image using libcamera-still"""
-        cmd = ["libcamera-still", "-o", filename, "--timeout", "1000"]
+        cmd = ["libcamera-still", "-o", filename, "--timeout", "1000",
+               "--autofocus-mode", "manual", "--lens-position", "7.0"]
         subprocess.run(cmd, check=True)
         
         temp_img = cv2.imread(filename)
@@ -34,61 +36,249 @@ class ImageProcessor:
         if save_intermediate:
             cv2.imwrite('intermediate_1_trans.jpg', img)
         
-        # Filter for red line
-        lowerb = np.array([0, 0, 240])
-        upperb = np.array([255, 255, 255])
-        red_line = cv2.inRange(img, lowerb, upperb)
+        # Extract red channel for additional filtering
+        red_channel = img[:, :, 2]
+        _, red_line = cv2.threshold(red_channel, 170, 255, cv2.THRESH_BINARY)
         
         if save_intermediate:
-            cv2.imwrite('intermediate_2_red.jpg', red_line)
+            cv2.imwrite('intermediate_3_red_only.jpg', red_line)
         
-        # Extract line points
+        # Extract all detected columns first (for continuity check)
         h, w = red_line.shape
-        backG = np.zeros((h, w))
-        bottom_row = 0
-        
-        # Collect all detected columns first
         detected_cols = []
+        
         for r in range(h):
             c_index = np.argmax(red_line[r, :])
             if red_line[r, c_index] != 0:
                 detected_cols.append(c_index)
-                bottom_row = r
             else:
-                detected_cols.append(-1)  # Mark rows with no detection
+                detected_cols.append(-1)
+
+        # NEW: Dynamically detect where object ends and turntable begins
+        print("\n" + "="*60)
+        print("TURNTABLE BOUNDARY DETECTION")
+        print("="*60)
+        debug_info = {}
+        object_boundary = self.detect_turntable_by_direction_change(detected_cols, debug_info)
+        print("="*60 + "\n")
         
-        # Apply smoothing to the detected columns (moving average)
-        smoothed_cols = []
-        window_size = 9  # Adjust this for more/less smoothing (5=light, 9=medium, 15=heavy)
-        half_window = window_size // 2
+        # Filter out everything below the boundary (turntable reflection)
+        print(f"Filtering out rows {object_boundary + 1} to {h - 1} (turntable reflection)")
+        for r in range(object_boundary + 1, h):
+            detected_cols[r] = -1
+
+        # Find bottom_row: Use the LOWEST detected point across ALL segments
+        # This handles objects with multiple radii that create separate line segments
+        
+        # Strategy 1: Find ALL continuous sequences
+        sequences = []
+        current_sequence_start = -1
         
         for r in range(h):
-            if detected_cols[r] == -1:
-                smoothed_cols.append(-1)
-                continue
-            
-            # Get neighboring valid columns
-            valid_neighbors = []
-            for offset in range(-half_window, half_window + 1):
-                neighbor_r = r + offset
-                if 0 <= neighbor_r < h and detected_cols[neighbor_r] != -1:
-                    valid_neighbors.append(detected_cols[neighbor_r])
-            
-            # Average the neighbors
-            if valid_neighbors:
-                smoothed_cols.append(int(np.mean(valid_neighbors)))
+            if detected_cols[r] != -1:
+                if current_sequence_start == -1:
+                    current_sequence_start = r
             else:
-                smoothed_cols.append(detected_cols[r])
+                if current_sequence_start != -1:
+                    sequences.append((current_sequence_start, r - 1))
+                    current_sequence_start = -1
         
-        # Fill backG with smoothed positions
+        # Don't forget final sequence
+        if current_sequence_start != -1:
+            sequences.append((current_sequence_start, h - 1))
+        
+        print(f"Found {len(sequences)} line segment(s):")
+        for i, (start, end) in enumerate(sequences):
+            print(f"  Segment {i+1}: rows {start} to {end} (length: {end - start + 1})")
+        
+        # Strategy 2: Filter out noise (segments shorter than threshold)
+        MIN_SEGMENT_LENGTH = 10  # Segments must be at least this many rows
+        valid_segments = [(start, end) for start, end in sequences 
+                          if (end - start + 1) >= MIN_SEGMENT_LENGTH]
+        
+        if len(valid_segments) < len(sequences):
+            filtered_count = len(sequences) - len(valid_segments)
+            print(f"  Filtered out {filtered_count} short segment(s) (likely noise)")
+        
+        # Strategy 3: Find the LOWEST point among all valid segments
+        bottom_row = 0
+        if valid_segments:
+            # Get the maximum 'end' value (lowest row number)
+            bottom_row = max(end for start, end in valid_segments)
+            print(f"Bottom row: {bottom_row} (lowest point across all segments)")
+        else:
+            # Fallback: just use last detected point
+            for r in range(h - 1, -1, -1):  # Search from bottom up
+                if detected_cols[r] != -1:
+                    bottom_row = r
+                    break
+            print(f"Bottom row: {bottom_row} (fallback: last detected point)")
+        
+        # Apply Gaussian smoothing to detected columns
+        smoothed_cols = self.gaussian_smooth_line(detected_cols, valid_segments, sigma=5.0)
+        
+        # Create backG with smoothed line
+        backG = np.zeros((h, w))
         for r in range(h):
             if smoothed_cols[r] != -1:
                 backG[r, smoothed_cols[r]] = 1
         
         if save_intermediate:
-            cv2.imwrite('intermediate_3_line.jpg', backG * 255)
+            cv2.imwrite('intermediate_5_smoothed_line.jpg', backG * 255)
             
         return backG, bottom_row
+
+
+    def detect_turntable_by_direction_change(self, detected_cols, debug_info=None):
+        """
+        Detect turntable by finding sudden changes in line direction.
+        When laser goes from object to turntable, the angle changes abruptly.
+        """
+        h = len(detected_cols)
+        window_size = 20  # Adjust this: larger = smoother but less sensitive
+        angle_change_threshold = 65.0  # degrees, adjust based on testing
+        
+        if debug_info is not None:
+            debug_info['angles'] = []
+            debug_info['angle_diffs'] = []
+        
+        # Calculate local line angles using linear regression in sliding windows
+        for r in range(h - window_size * 2, window_size, -5):  # Scan from bottom up
+            # Get two consecutive windows
+            window1_points = []
+            window2_points = []
+            
+            for i in range(r - window_size, r):
+                if 0 <= i < h and detected_cols[i] != -1:
+                    window1_points.append((i, detected_cols[i]))
+            
+            for i in range(r, r + window_size):
+                if 0 <= i < h and detected_cols[i] != -1:
+                    window2_points.append((i, detected_cols[i]))
+            
+            # Need enough points in both windows
+            if len(window1_points) < 10 or len(window2_points) < 10:
+                continue
+            
+            # Fit lines to both windows
+            y1, x1 = zip(*window1_points)
+            y2, x2 = zip(*window2_points)
+            
+            # Calculate slopes using least squares
+            slope1 = np.polyfit(y1, x1, 1)[0] if len(y1) > 1 else 0
+            slope2 = np.polyfit(y2, x2, 1)[0] if len(y2) > 1 else 0
+            
+            # Convert slopes to angles
+            angle1 = np.degrees(np.arctan(slope1))
+            angle2 = np.degrees(np.arctan(slope2))
+            
+            if debug_info is not None:
+                debug_info['angles'].append((r, angle1, angle2))
+            
+            # Check for significant angle change
+            angle_diff = abs(angle2 - angle1)
+            
+            if debug_info is not None:
+                debug_info['angle_diffs'].append((r, angle_diff))
+            
+            if angle_diff > angle_change_threshold:
+                print(f"  Direction change detected at row {r}")
+                print(f"    Angle before: {angle1:.1f}°, after: {angle2:.1f}°, diff: {angle_diff:.1f}°")
+                if debug_info is not None:
+                    debug_info['boundary_row'] = r
+                    debug_info['boundary_reason'] = 'direction_change'
+                return r
+        
+        # Fallback: return last detected point
+        for r in range(h - 1, -1, -1):
+            if detected_cols[r] != -1:
+                if debug_info is not None:
+                    debug_info['boundary_row'] = r
+                    debug_info['boundary_reason'] = 'fallback_last_point'
+                return r
+        
+        if debug_info is not None:
+            debug_info['boundary_row'] = h - 1
+            debug_info['boundary_reason'] = 'fallback_end'
+        return h - 1
+
+    def gaussian_smooth_line(self, detected_cols, valid_segments, sigma=2.0):
+        """
+        Apply Gaussian smoothing to the detected line coordinates.
+        
+        Args:
+            detected_cols: List of detected column positions (-1 for no detection)
+            valid_segments: List of (start, end) tuples for continuous line segments
+            sigma: Standard deviation for Gaussian kernel (controls smoothing strength)
+        
+        Returns:
+            List of smoothed column positions
+        """
+        h = len(detected_cols)
+        smoothed_cols = [-1] * h
+        
+        # Process each valid segment separately to avoid smoothing across gaps
+        for start_row, end_row in valid_segments:
+            segment_length = end_row - start_row + 1
+            
+            # Extract the segment data (only valid detections)
+            segment_cols = []
+            segment_rows = []
+            
+            for r in range(start_row, end_row + 1):
+                if detected_cols[r] != -1:
+                    segment_cols.append(detected_cols[r])
+                    segment_rows.append(r)
+            
+            if len(segment_cols) < 3:
+                # Too few points for meaningful smoothing, just copy original
+                for r in range(start_row, end_row + 1):
+                    smoothed_cols[r] = detected_cols[r]
+                continue
+            
+            # Convert to numpy arrays for easier processing
+            segment_cols = np.array(segment_cols, dtype=float)
+            segment_rows = np.array(segment_rows)
+            
+            # Apply Gaussian filter to the column positions
+            # Use sigma to control smoothing strength (larger = more smoothing)
+            smoothed_segment = ndimage.gaussian_filter1d(segment_cols, sigma=sigma)
+            
+            # Map the smoothed values back to the original row positions
+            for i, row in enumerate(segment_rows):
+                smoothed_cols[row] = int(round(smoothed_segment[i]))
+            
+            # Fill in any gaps within the segment using interpolation
+            for r in range(start_row, end_row + 1):
+                if detected_cols[r] == -1 and smoothed_cols[r] == -1:
+                    # Find nearest smoothed values for interpolation
+                    prev_valid = None
+                    next_valid = None
+                    
+                    # Look backwards for previous valid point
+                    for prev_r in range(r - 1, start_row - 1, -1):
+                        if smoothed_cols[prev_r] != -1:
+                            prev_valid = (prev_r, smoothed_cols[prev_r])
+                            break
+                    
+                    # Look forwards for next valid point
+                    for next_r in range(r + 1, end_row + 1):
+                        if smoothed_cols[next_r] != -1:
+                            next_valid = (next_r, smoothed_cols[next_r])
+                            break
+                    
+                    # Interpolate if we have both neighbors
+                    if prev_valid and next_valid:
+                        prev_row, prev_col = prev_valid
+                        next_row, next_col = next_valid
+                        
+                        # Linear interpolation
+                        alpha = (r - prev_row) / (next_row - prev_row)
+                        interpolated_col = prev_col + alpha * (next_col - prev_col)
+                        smoothed_cols[r] = int(round(interpolated_col))
+        
+        print(f"Applied Gaussian smoothing with sigma={sigma}")
+        return smoothed_cols
 
     def extract_coordinates(self, processed_img, bottom_row, theta):
         """Extract cylindrical coordinates from processed image"""
@@ -96,9 +286,15 @@ class ImageProcessor:
         coords = []
         for r, c_index in enumerate(np.argmax(processed_img, axis=1)):
             if processed_img[r, c_index] == 1:
+                # CRITICAL: Ignore any points below bottom_row (noise)
+                if r > bottom_row:
+                    continue  # Skip this row - it's noise below the object
+                
                 height = bottom_row - r
                 dist = c_index - self.center_column
                 coords.append(Vertex(height, np.radians(theta), dist))
+        
+        print(f"Extracted {len(coords)} coordinates (noise below row {bottom_row} filtered)")
         return coords
 
     def downsample_coordinates(self, coords, vertical_resolution=20):
@@ -117,145 +313,3 @@ class ImageProcessor:
         downsampled.append(coords[-1])
         
         return downsampled
-
-
-
-def main():
-    """Test the image processing pipeline"""
-    import sys
-    
-    print("="*60)
-    print("Image Processor Test")
-    print("="*60)
-    
-    # Initialize processor
-    processor = ImageProcessor()
-    print(f"\nProcessor initialized with:")
-    print(f"  Top-left: {processor.tlp}")
-    print(f"  Top-right: {processor.trp}")
-    print(f"  Bottom-right: {processor.brp}")
-    print(f"  Bottom-left: {processor.blp}")
-    print(f"  Center column: {processor.center_column}")
-    
-    # Test 1: Capture image
-    print("\n" + "-"*60)
-    print("Test 1: Capturing image...")
-    print("-"*60)
-    try:
-        img = processor.capture_image('test_capture.jpg')
-        print(f"✓ Image captured successfully!")
-        print(f"  Image shape: {img.shape}")
-        print(f"  Image dtype: {img.dtype}")
-    except Exception as e:
-        print(f"✗ Failed to capture image: {e}")
-        sys.exit(1)
-    
-    # Test 2: Process image
-    print("\n" + "-"*60)
-    print("Test 2: Processing image...")
-    print("-"*60)
-    try:
-        processed_img, bottom_row = processor.process_image(img, save_intermediate=True)
-        print(f"✓ Image processed successfully!")
-        print(f"  Processed shape: {processed_img.shape}")
-        print(f"  Bottom row: {bottom_row}")
-        print(f"  Non-zero pixels: {np.count_nonzero(processed_img)}")
-        
-        # Save processed image for visualization
-        processed_visual = (processed_img * 255).astype(np.uint8)
-        cv2.imwrite('test_processed.jpg', processed_visual)
-        print(f"  Saved images:")
-        print(f"    - intermediate_1_transformed.jpg (after perspective transform)")
-        print(f"    - intermediate_2_red_filtered.jpg (after red line filter)")
-        print(f"    - test_processed.jpg (final binary line detection)")
-    except Exception as e:
-        print(f"✗ Failed to process image: {e}")
-        sys.exit(1)
-    
-    # Test 3: Extract coordinates
-    print("\n" + "-"*60)
-    print("Test 3: Extracting coordinates...")
-    print("-"*60)
-    test_theta = 45.0  # Test angle
-    try:
-        coords = processor.extract_coordinates(processed_img, bottom_row, test_theta)
-        print(f"✓ Coordinates extracted successfully!")
-        print(f"  Total coordinates: {len(coords)}")
-        if coords:
-            print(f"  First coord: (h={coords[0].x:.1f}, θ={np.degrees(coords[0].y):.1f}°, d={coords[0].z:.1f})")
-            print(f"  Last coord: (h={coords[-1].x:.1f}, θ={np.degrees(coords[-1].y):.1f}°, d={coords[-1].z:.1f})")
-    except Exception as e:
-        print(f"✗ Failed to extract coordinates: {e}")
-        sys.exit(1)
-    
-    # Test 4: Downsample coordinates
-    print("\n" + "-"*60)
-    print("Test 4: Downsampling coordinates...")
-    print("-"*60)
-    test_resolutions = [5, 10, 20, 50]
-    
-    for resolution in test_resolutions:
-        try:
-            downsampled = processor.downsample_coordinates(coords, resolution)
-            print(f"  Resolution {resolution:2d}: {len(coords):4d} → {len(downsampled):4d} points")
-        except Exception as e:
-            print(f"  Resolution {resolution:2d}: Failed - {e}")
-    
-    # Test 5: Visual verification
-    print("\n" + "-"*60)
-    print("Test 5: Creating visualization...")
-    print("-"*60)
-    try:
-        # Create a visualization showing the detected line
-        vis_img = cv2.imread('test_capture.jpg')
-        
-        # Apply same transform for visualization
-        pts = np.array([processor.tlp, processor.trp, processor.brp, processor.blp])
-        vis_transformed = four_point_transform(vis_img, pts)
-        
-        # Draw the detected points on the visualization
-        for r, c_index in enumerate(np.argmax(processed_img, axis=1)):
-            if processed_img[r, c_index] == 1:
-                cv2.circle(vis_transformed, (int(c_index), int(r)), 2, (0, 255, 0), -1)
-        
-        # Draw center line
-        h, w = vis_transformed.shape[:2]
-        cv2.line(vis_transformed, 
-                (int(processor.center_column), 0), 
-                (int(processor.center_column), h), 
-                (255, 0, 0), 2)
-        
-        # Draw bottom row line
-        cv2.line(vis_transformed, (0, bottom_row), (w, bottom_row), (0, 0, 255), 2)
-        
-        cv2.imwrite('test_visualization.jpg', vis_transformed)
-        print(f"✓ Visualization created!")
-        print(f"  Saved to: test_visualization.jpg")
-        print(f"  Green dots: detected line points")
-        print(f"  Blue line: center column reference")
-        print(f"  Red line: bottom row reference")
-    except Exception as e:
-        print(f"✗ Failed to create visualization: {e}")
-    
-    # Summary
-    print("\n" + "="*60)
-    print("Test Summary")
-    print("="*60)
-    print(f"✓ All tests completed successfully!")
-    print(f"\nGenerated files:")
-    print(f"  - test_capture.jpg (original capture)")
-    print(f"  - intermediate_1_transformed.jpg (after perspective transform)")
-    print(f"  - intermediate_2_red_filtered.jpg (after red line filter)")
-    print(f"  - test_processed.jpg (final binary line detection)")
-    print(f"  - test_visualization.jpg (annotated with references)")
-    print("\nNext steps:")
-    print(f"  1. Check intermediate_1_transformed.jpg - verify perspective is correct")
-    print(f"  2. Check intermediate_2_red_filtered.jpg - verify red line is detected")
-    print(f"  3. Check test_visualization.jpg - verify coordinate extraction")
-    print(f"  4. Adjust corner points (tlp, trp, brp, blp) if needed")
-    print(f"  5. Adjust red filter thresholds if line detection is poor")
-    print("="*60)
-
-
-if __name__ == "__main__":
-    main()
