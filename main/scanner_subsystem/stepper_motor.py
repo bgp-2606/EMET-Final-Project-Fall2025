@@ -6,7 +6,7 @@ class StepperMotor:
     Class to control a NEMA 17 stepper motor with A4988 driver
     """
     
-    def __init__(self, dir_pin, step_pin, steps_per_rev=200, microstep_multiplier=32):
+    def __init__(self, dir_pin, step_pin, steps_per_rev=200, microstep_multiplier=1):
         """
         Initialize the stepper motor controller
         
@@ -92,39 +92,3 @@ class StepperMotor:
         """Clean up GPIO pins"""
         GPIO.cleanup()
         print("GPIO cleanup complete")
-
-
-# Example usage
-if __name__ == "__main__":
-    # Create motor instance
-    # Set microstep_multiplier to match your hardware settings:
-    # 1 = full step, 2 = half step, 4 = quarter step, 8 = eighth step, 16 = sixteenth step
-    motor = StepperMotor(
-        dir_pin=23,
-        step_pin=24,
-        microstep_multiplier=32  # Adjust this to match your hardware DIP switch settings
-    )
-    
-    try:
-        while True:
-            # Rotate one full revolution
-            print("Rotating 360° clockwise...")
-            start_time = time.time()
-            motor.rotate_angle(360, rpm=60, direction=1)
-            elapsed = time.time() - start_time
-            print(f"Completed in {elapsed:.2f} seconds (should be ~1.0s)")
-            
-            time.sleep(0.5)
-            
-            print("Rotating 360° counter-clockwise...")
-            motor.rotate_angle(360, rpm=60, direction=0)
-            
-            time.sleep(1)
-            print("\nTest complete!")
-        
-    except KeyboardInterrupt:
-        print("\nProgram interrupted by user")
-        motor.stop()
-    
-    finally:
-        motor.cleanup()
