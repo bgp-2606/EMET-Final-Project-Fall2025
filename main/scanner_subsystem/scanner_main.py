@@ -13,40 +13,44 @@ from email_sender import EmailSender
 
 class Scanner3D:
     """Main 3D scanner controller"""
-    def __init__(self, dir_pin=23, step_pin=24, button_pin=20, led_pin=21,
-                 email_user='padl0005', email_pass='yA314402'):
+    def __init__(self, dir1_pin=23, step1_pin=24, dir2_pin=25, step2_pin=12, 
+                 switch_pin=16, green_led_pin=21, red_led_pin=20,
+                 part_loaded_pin = 18
+                 ):
         """
         Initialize 3D scanner
         
         Args:
-            dir_pin (int): Direction pin for stepper motor
-            step_pin (int): Step pin for stepper motor
-            button_pin (int): GPIO pin for start button
-            led_pin (int): GPIO pin for status LED
-            email_user (str): Email username for sending results
-            email_pass (str): Email password
+            dir1_pin (int): Direction pin for stepper motor 1 (scanner table)
+            step1_pin (int): Step pin for stepper motor 1 (scanner table)
+            dir2_pin (int): Direction pin for stepper motor 2 (lid motor)
+            step2_pin (int): Step pin for stepper motor 2 (lid motor)
+            switch_pin (int): GPIO pin for the lid limit switch
+            green_led_pin (int): GPIO pin for scanner status LED
+            red_led_pin (int): GPIO pin for scanner fault LED
         """
         # Hardware components
-        self.motor = StepperMotor(dir_pin, step_pin)
-        self.button = Button(button_pin)
-        self.led = PWMLED(led_pin)
+        self.motor1 = StepperMotor(dir1_pin, step1_pin, microstep_multiplier=32)
+        self.motor2 = StepperMotor(dir2_pin, step2_pin, microstep_multiplier=16)
+        self.switch = Button(switch_pin, bounce_time=0.05)
+        self.sensor = Button(part_loaded_pin, bounce_time=0.3)
+        self.green_led = PWMLED(green_led_pin)
+        self.red_led = PWMLED(red_led_pin)
         
         # Processing components
         self.image_processor = ImageProcessor()
         self.mesh_generator = MeshGenerator()
         self.file_writer = OBJFileWriter()
-        self.email_sender = EmailSender(email_user, email_pass)
         
         # Scan parameters
         self.angular_resolution =  40 # Number of angles to capture
         self.vertical_resolution = 50  # Number of vertical points per angle
         self.scan_rpm = 10  # Speed of rotation during scan
 
-
-    def wait_for_start(self):
-        """Wait for button press to start scan"""
-        while not self.button.is_pressed:
-            sleep(0.1)
+        # Lid open/close parameter
+        self.lid_angle = 360
+        self.lid_rpm = 120
+        self.lid_curr_pos = 0
 
     def perform_scan(self):
         """Execute a complete 3D scan"""
@@ -75,7 +79,7 @@ class Scanner3D:
             # Move motor to next angle
             theta += theta_inc
             if scan_step < self.angular_resolution - 1:  # Don't rotate after last capture
-                self.motor.rotate_angle(theta_inc, rpm=self.scan_rpm, direction=1)
+                self.motor1.rotate_angle(theta_inc, rpm=self.scan_rpm, direction=1)
                 time.sleep(0.2)  # Brief pause for stability
 
         return mesh_points
@@ -87,18 +91,24 @@ class Scanner3D:
                 print("\n" + "="*50)
                 print("3D Scanner Ready")
                 print("="*50)
-                print("Press button to start scan...")
-                self.wait_for_start()
+
+                print("Place part on scanner table...")
+                self.sensor.wait_for_press()
+                print("Close lid...")
+                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
+                print("Wait until lid is FULLY closed...")
+                self.switch.wait_for_press()
                 
                 print("\nStarting scan...")
-                self.led.pulse()
+                self.green_led.pulse()
                 
                 # Perform scan
                 mesh_points = self.perform_scan()
                 
                 if not mesh_points:
                     print("\nError: No mesh points captured!")
-                    self.led.off()
+                    self.green_led.off()
+                    self.red_led.pulse()
                     continue
                 
                 print(f"\nScan complete! Captured {len(mesh_points)} scan lines")
@@ -114,16 +124,11 @@ class Scanner3D:
                 filename = '3d.obj'
                 self.file_writer.write(filename, points, faces)
                 print(f"Mesh saved to {filename}")
-                
-                # Send email
-                try:
-                    self.email_sender.send_file('padl0005@algonquinlive.com', filename)
-                    print("Email sent successfully!")
-                except Exception as e:
-                    print(f"Failed to send email: {e}")
-                
-                self.led.off()
-                print("\nScan complete! Ready for next scan.\n")
+
+                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=1)
+
+                self.green_led.off()
+                print("\nScan complete!\n")
                 
         except KeyboardInterrupt:
             print("\n\nShutting down...")
