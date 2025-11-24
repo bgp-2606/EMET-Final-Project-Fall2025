@@ -5,18 +5,17 @@ import time
 from time import sleep
 from gpiozero import PWMLED, Button
 
+from sensor import UltrasonicSensor
 from stepper_motor import StepperMotor
 from image_processing import ImageProcessor
 from mesh_generation import MeshGenerator, OBJFileWriter
-from email_sender import EmailSender
 
 
 class Scanner3D:
     """Main 3D scanner controller"""
     def __init__(self, dir1_pin=23, step1_pin=24, dir2_pin=25, step2_pin=12, 
                  switch_pin=16, green_led_pin=21, red_led_pin=20,
-                 part_loaded_pin = 18
-                 ):
+                 sensor_trig_pin=17, sensor_echo_pin=27):
         """
         Initialize 3D scanner
         
@@ -28,12 +27,14 @@ class Scanner3D:
             switch_pin (int): GPIO pin for the lid limit switch
             green_led_pin (int): GPIO pin for scanner status LED
             red_led_pin (int): GPIO pin for scanner fault LED
+            sensor_trig_pin (int): GPIO pin for ultrasonic trigger
+            sensor_echo_pin (int): GPIO pin for ultrasonic echo
         """
         # Hardware components
         self.motor1 = StepperMotor(dir1_pin, step1_pin, microstep_multiplier=32)
         self.motor2 = StepperMotor(dir2_pin, step2_pin, microstep_multiplier=16)
         self.switch = Button(switch_pin, bounce_time=0.05)
-        self.sensor = Button(part_loaded_pin, bounce_time=0.3)
+        self.sensor = UltrasonicSensor(sensor_trig_pin, sensor_echo_pin, detection_threshold=12.0)
         self.green_led = PWMLED(green_led_pin)
         self.red_led = PWMLED(red_led_pin)
         
@@ -93,9 +94,15 @@ class Scanner3D:
                 print("="*50)
 
                 print("Place part on scanner table...")
-                self.sensor.wait_for_press()
+                # Wait for part
+                self.sensor.wait_for_part_placement()
+                
+                # Wait 5 seconds for robot gripper to move away
+                time.sleep(5)
+                
                 print("Close lid...")
-                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
+                #self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
+                
                 print("Wait until lid is FULLY closed...")
                 self.switch.wait_for_press()
                 
@@ -125,7 +132,7 @@ class Scanner3D:
                 self.file_writer.write(filename, points, faces)
                 print(f"Mesh saved to {filename}")
 
-                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=1)
+                #self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=1)
 
                 self.green_led.off()
                 print("\nScan complete!\n")
@@ -133,8 +140,10 @@ class Scanner3D:
         except KeyboardInterrupt:
             print("\n\nShutting down...")
         finally:
-            self.motor.stop()
-            self.motor.cleanup()
+            self.motor1.stop()
+            self.motor2.stop()
+            self.motor1.cleanup()
+            self.motor2.cleanup()
             print("Cleanup complete")
 
 

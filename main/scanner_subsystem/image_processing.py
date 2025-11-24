@@ -30,6 +30,9 @@ class ImageProcessor:
 
     def process_image(self, img, save_intermediate=False):
         """Process image to extract line coordinates"""
+        # Keep a copy of original for visualization
+        original_img = img.copy() if save_intermediate else None
+        
         # Apply perspective transform
         pts = np.array([self.tlp, self.trp, self.brp, self.blp])
         img = four_point_transform(img, pts)
@@ -53,19 +56,11 @@ class ImageProcessor:
                 detected_cols.append(c_index)
             else:
                 detected_cols.append(-1)
-
-        # NEW: Dynamically detect where object ends and turntable begins
-        print("\n" + "="*60)
-        print("TURNTABLE BOUNDARY DETECTION")
-        print("="*60)
-        debug_info = {}
-        object_boundary = self.detect_turntable_by_direction_change(detected_cols, debug_info)
-        print("="*60 + "\n")
-        
-        # Filter out everything below the boundary (turntable reflection)
-        print(f"Filtering out rows {object_boundary + 1} to {h - 1} (turntable reflection)")
-        for r in range(object_boundary + 1, h):
+                
+        REMOVE_BOTTOM_ROWS = 15  # Adjust this value
+        for r in range(max(0, h - REMOVE_BOTTOM_ROWS), h):
             detected_cols[r] = -1
+        print(f"Removed bottom {REMOVE_BOTTOM_ROWS} rows (table reflections)")
 
         # Find bottom_row: Use the LOWEST detected point across ALL segments
         # This handles objects with multiple radii that create separate line segments
@@ -114,93 +109,92 @@ class ImageProcessor:
                     break
             print(f"Bottom row: {bottom_row} (fallback: last detected point)")
         
-        # Apply Gaussian smoothing to detected columns
-        smoothed_cols = self.gaussian_smooth_line(detected_cols, valid_segments, sigma=5.0)
+        # Strategy 4: Straighten each valid segment by averaging
+        print("\nStraightening segments:")
+        for i, (start, end) in enumerate(valid_segments):
+            # Calculate average column for this segment
+            segment_cols = [detected_cols[r] for r in range(start, end + 1) 
+                            if detected_cols[r] != -1]
+            
+            if segment_cols:  # Make sure we have valid data
+                avg_col = np.mean(segment_cols)
+                print(f"  Segment {i+1} (rows {start}-{end}): avg column = {avg_col:.1f}")
+                
+                # Set all rows in this segment to the average
+                for r in range(start, end + 1):
+                    if detected_cols[r] != -1:
+                        detected_cols[r] = int(round(avg_col))
         
-        # Create backG with smoothed line
+        # Fill gaps between segments
+        print("\nFilling gaps between segments:")
+        for i in range(len(valid_segments) - 1):
+            _, current_end = valid_segments[i]
+            next_start, _ = valid_segments[i + 1]
+            
+            if next_start == current_end + 1:
+                col_current = detected_cols[current_end]
+                col_next = detected_cols[next_start]
+                
+                if col_current != -1 and col_next != -1:
+                    min_col = int(min(col_current, col_next))
+                    max_col = int(max(col_current, col_next))
+                    print(f"  Filling row {next_start}: columns {min_col} to {max_col}")
+
+        
+        # Apply Gaussian smoothing to detected columns
+        #smoothed_cols = self.gaussian_smooth_line(detected_cols, valid_segments, sigma=3.0)
+        smoothed_cols = detected_cols
+        
+        # Create backG with smoothed line AND horizontal connectors
         backG = np.zeros((h, w))
+
+        # First pass: draw detected points
         for r in range(h):
             if smoothed_cols[r] != -1:
-                backG[r, smoothed_cols[r]] = 1
+                backG[r, int(smoothed_cols[r])] = 1
+
+        # Second pass: draw horizontal connectors between segments
+        for i in range(len(valid_segments) - 1):
+            _, current_end = valid_segments[i]
+            next_start, _ = valid_segments[i + 1]
+            
+            if next_start == current_end + 1:
+                col_current = smoothed_cols[current_end]
+                col_next = smoothed_cols[next_start]
+                
+                if col_current != -1 and col_next != -1:
+                    min_col = int(min(col_current, col_next))
+                    max_col = int(max(col_current, col_next))
+                    backG[next_start, min_col:max_col+1] = 1
         
         if save_intermediate:
             cv2.imwrite('intermediate_5_smoothed_line.jpg', backG * 255)
             
+            # Create visualization showing detected line with reference lines
+            print("\nCreating visualization...")
+            vis_img = four_point_transform(original_img, pts)
+            
+            # Draw the detected points on the visualization (green dots)
+            for r, c_index in enumerate(np.argmax(backG, axis=1)):
+                if backG[r, c_index] == 1:
+                    cv2.circle(vis_img, (int(c_index), int(r)), 2, (0, 255, 0), -1)
+            
+            # Draw center line (blue)
+            cv2.line(vis_img, 
+                    (int(self.center_column), 0), 
+                    (int(self.center_column), h), 
+                    (255, 0, 0), 2)
+            
+            # Draw bottom row line (red)
+            cv2.line(vis_img, (0, bottom_row), (w, bottom_row), (0, 0, 255), 2)
+            
+            cv2.imwrite('test_visualization.jpg', vis_img)
+            print(f"✓ Visualization saved to: test_visualization.jpg")
+            print(f"  Green dots: detected line points")
+            print(f"  Blue line: center column reference")
+            print(f"  Red line: bottom row reference")
+            
         return backG, bottom_row
-
-
-    def detect_turntable_by_direction_change(self, detected_cols, debug_info=None):
-        """
-        Detect turntable by finding sudden changes in line direction.
-        When laser goes from object to turntable, the angle changes abruptly.
-        """
-        h = len(detected_cols)
-        window_size = 20  # Adjust this: larger = smoother but less sensitive
-        angle_change_threshold = 65.0  # degrees, adjust based on testing
-        
-        if debug_info is not None:
-            debug_info['angles'] = []
-            debug_info['angle_diffs'] = []
-        
-        # Calculate local line angles using linear regression in sliding windows
-        for r in range(h - window_size * 2, window_size, -5):  # Scan from bottom up
-            # Get two consecutive windows
-            window1_points = []
-            window2_points = []
-            
-            for i in range(r - window_size, r):
-                if 0 <= i < h and detected_cols[i] != -1:
-                    window1_points.append((i, detected_cols[i]))
-            
-            for i in range(r, r + window_size):
-                if 0 <= i < h and detected_cols[i] != -1:
-                    window2_points.append((i, detected_cols[i]))
-            
-            # Need enough points in both windows
-            if len(window1_points) < 10 or len(window2_points) < 10:
-                continue
-            
-            # Fit lines to both windows
-            y1, x1 = zip(*window1_points)
-            y2, x2 = zip(*window2_points)
-            
-            # Calculate slopes using least squares
-            slope1 = np.polyfit(y1, x1, 1)[0] if len(y1) > 1 else 0
-            slope2 = np.polyfit(y2, x2, 1)[0] if len(y2) > 1 else 0
-            
-            # Convert slopes to angles
-            angle1 = np.degrees(np.arctan(slope1))
-            angle2 = np.degrees(np.arctan(slope2))
-            
-            if debug_info is not None:
-                debug_info['angles'].append((r, angle1, angle2))
-            
-            # Check for significant angle change
-            angle_diff = abs(angle2 - angle1)
-            
-            if debug_info is not None:
-                debug_info['angle_diffs'].append((r, angle_diff))
-            
-            if angle_diff > angle_change_threshold:
-                print(f"  Direction change detected at row {r}")
-                print(f"    Angle before: {angle1:.1f}°, after: {angle2:.1f}°, diff: {angle_diff:.1f}°")
-                if debug_info is not None:
-                    debug_info['boundary_row'] = r
-                    debug_info['boundary_reason'] = 'direction_change'
-                return r
-        
-        # Fallback: return last detected point
-        for r in range(h - 1, -1, -1):
-            if detected_cols[r] != -1:
-                if debug_info is not None:
-                    debug_info['boundary_row'] = r
-                    debug_info['boundary_reason'] = 'fallback_last_point'
-                return r
-        
-        if debug_info is not None:
-            debug_info['boundary_row'] = h - 1
-            debug_info['boundary_reason'] = 'fallback_end'
-        return h - 1
 
     def gaussian_smooth_line(self, detected_cols, valid_segments, sigma=2.0):
         """
