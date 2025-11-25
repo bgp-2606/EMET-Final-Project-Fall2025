@@ -17,6 +17,8 @@ class ImageProcessor:
         self.brp = (1205.0, 790.0)
         self.blp = (521.0, 845.0)
         self.center_column = 352.0
+        self.height_mm_per_pixel = 0.124602
+        self.radial_mm_per_pixel = 0.157199
     
     def capture_image(self, filename='lineDetection.jpg'):
         """Capture an image using libcamera-still"""
@@ -109,21 +111,21 @@ class ImageProcessor:
                     break
             print(f"Bottom row: {bottom_row} (fallback: last detected point)")
         
-        # Strategy 4: Straighten each valid segment by averaging
-        print("\nStraightening segments:")
-        for i, (start, end) in enumerate(valid_segments):
-            # Calculate average column for this segment
-            segment_cols = [detected_cols[r] for r in range(start, end + 1) 
-                            if detected_cols[r] != -1]
-            
-            if segment_cols:  # Make sure we have valid data
-                avg_col = np.mean(segment_cols)
-                print(f"  Segment {i+1} (rows {start}-{end}): avg column = {avg_col:.1f}")
-                
-                # Set all rows in this segment to the average
-                for r in range(start, end + 1):
-                    if detected_cols[r] != -1:
-                        detected_cols[r] = int(round(avg_col))
+#         # Strategy 4: Straighten each valid segment by averaging
+#         print("\nStraightening segments:")
+#         for i, (start, end) in enumerate(valid_segments):
+#             # Calculate average column for this segment
+#             segment_cols = [detected_cols[r] for r in range(start, end + 1) 
+#                             if detected_cols[r] != -1]
+#             
+#             if segment_cols:  # Make sure we have valid data
+#                 avg_col = np.mean(segment_cols)
+#                 print(f"  Segment {i+1} (rows {start}-{end}): avg column = {avg_col:.1f}")
+#                 
+#                 # Set all rows in this segment to the average
+#                 for r in range(start, end + 1):
+#                     if detected_cols[r] != -1:
+#                         detected_cols[r] = int(round(avg_col))
         
         # Fill gaps between segments
         print("\nFilling gaps between segments:")
@@ -275,20 +277,24 @@ class ImageProcessor:
         return smoothed_cols
 
     def extract_coordinates(self, processed_img, bottom_row, theta):
-        """Extract cylindrical coordinates from processed image"""
-        print(f"bottom row: {bottom_row}")
+        """Extract cylindrical coordinates in MILLIMETERS"""
         coords = []
         for r, c_index in enumerate(np.argmax(processed_img, axis=1)):
             if processed_img[r, c_index] == 1:
-                # CRITICAL: Ignore any points below bottom_row (noise)
                 if r > bottom_row:
-                    continue  # Skip this row - it's noise below the object
+                    continue
                 
-                height = bottom_row - r
-                dist = c_index - self.center_column
-                coords.append(Vertex(height, np.radians(theta), dist))
+                # Convert pixels to millimeters
+                height_px = bottom_row - r
+                dist_px = c_index - self.center_column
+                print(f"HEIGHT_PX {height_px}")
+                height_mm = height_px * self.height_mm_per_pixel
+                dist_mm = dist_px * self.radial_mm_per_pixel
+                
+                coords.append(Vertex(height_mm, np.radians(theta), dist_mm))
+                #coords.append(Vertex(height_px, np.radians(theta), dist_px))
         
-        print(f"Extracted {len(coords)} coordinates (noise below row {bottom_row} filtered)")
+        print(f"Extracted {len(coords)} coordinates in mm")
         return coords
 
     def downsample_coordinates(self, coords, vertical_resolution=20):

@@ -8,20 +8,17 @@ class MeshGenerator:
     """Generates 3D mesh from scan data"""
     
     def __init__(self):
-        # Calibrated scale factors (mm per pixel)
-        # Based on transformed image: 445x330 pixels = 2.75x2.4373 inches
-        self.HEIGHT_SCALE = 0.188 # mm per pixel (vertical)
-        self.RADIAL_SCALE = 0.157 # mm per pixel (horizontal)
+        pass
         
     def cylindrical_to_cartesian(self, coord):
         """Convert cylindrical coordinates to cartesian"""
-        height = coord.x * self.HEIGHT_SCALE
+        height = coord.x
         theta = coord.y
-        dist = coord.z * self.RADIAL_SCALE
+        dist = coord.z
         x = dist * math.cos(theta)
         y = dist * math.sin(theta)
         z = height
-        return Vertex(int(x), int(y), int(z))
+        return Vertex(x, y, z)
 
     @staticmethod
     def normalize_mesh_points(mesh_points):
