@@ -4,7 +4,7 @@ from time import sleep
 
 class UltrasonicSensor:
     """Ultrasonic distance sensor for part detection"""
-    def __init__(self, trigger_pin, echo_pin, detection_threshold=13.0):
+    def __init__(self, trigger_pin, echo_pin, detection_threshold=12.0):
         """
         Initialize ultrasonic sensor
         
@@ -56,7 +56,7 @@ class UltrasonicSensor:
         return distance
 
     def wait_for_part_placement(self, close_threshold=None, poll_interval=0.1, 
-                                        num_samples=10):
+                                        num_samples=15):
         """
         Wait for gripper using averaged distance readings
         

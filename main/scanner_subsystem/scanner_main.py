@@ -3,19 +3,20 @@
 import RPi.GPIO as GPIO
 import time
 from time import sleep
-from gpiozero import PWMLED, Button
+from gpiozero import PWMLED, Button, OutputDevice
 
 from sensor import UltrasonicSensor
 from stepper_motor import StepperMotor
 from image_processing import ImageProcessor
 from mesh_generation import MeshGenerator, OBJFileWriter
+from qc_inspection import QCInspector
 
 
 class Scanner3D:
     """Main 3D scanner controller"""
     def __init__(self, dir1_pin=23, step1_pin=24, dir2_pin=25, step2_pin=12, 
                  switch_pin=16, green_led_pin=21, red_led_pin=20,
-                 sensor_trig_pin=17, sensor_echo_pin=27):
+                 sensor_trig_pin=17, sensor_echo_pin=27, relay1_pin=5, relay2_pin=6):
         """
         Initialize 3D scanner
         
@@ -32,16 +33,19 @@ class Scanner3D:
         """
         # Hardware components
         self.motor1 = StepperMotor(dir1_pin, step1_pin, microstep_multiplier=32)
-        self.motor2 = StepperMotor(dir2_pin, step2_pin, microstep_multiplier=16)
+        self.motor2 = StepperMotor(dir2_pin, step2_pin, microstep_multiplier=1)
         self.switch = Button(switch_pin, bounce_time=0.05)
         self.sensor = UltrasonicSensor(sensor_trig_pin, sensor_echo_pin, detection_threshold=12.0)
         self.green_led = PWMLED(green_led_pin)
         self.red_led = PWMLED(red_led_pin)
+        self.relay1 = OutputDevice(relay1_pin)
+        self.relay2 = OutputDevice(relay2_pin)
         
         # Processing components
         self.image_processor = ImageProcessor()
         self.mesh_generator = MeshGenerator()
         self.file_writer = OBJFileWriter()
+        self.qc_inspector = QCInspector(tolerance_mm=2.54)
         
         # Scan parameters
         self.angular_resolution =  40 # Number of angles to capture
@@ -49,8 +53,8 @@ class Scanner3D:
         self.scan_rpm = 10  # Speed of rotation during scan
 
         # Lid open/close parameter
-        self.lid_angle = 360
-        self.lid_rpm = 120
+        self.lid_angle = 12288
+        self.lid_rpm = 180
         self.lid_curr_pos = 0
 
     def perform_scan(self):
@@ -89,6 +93,10 @@ class Scanner3D:
         """Main run loop"""
         try:
             while True:
+                print("Resetting outputs...")
+                self.relay1.off()
+                self.relay2.off()
+                
                 print("\n" + "="*50)
                 print("3D Scanner Ready")
                 print("="*50)
@@ -101,7 +109,12 @@ class Scanner3D:
                 time.sleep(5)
                 
                 print("Close lid...")
-                #self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
+                print(f"Closing lid: {self.lid_angle} steps at {self.lid_rpm} RPM")
+                print(f"With {self.motor2.microstep_multiplier}x microstepping")
+                print(f"This will take approximately {(self.lid_angle / (self.motor2.steps_per_rev * self.motor2.microstep_multiplier)) / self.lid_rpm * 60:.1f} seconds")
+
+                self.motor2.rotate_angle(abs(self.lid_angle), rpm=self.lid_rpm, direction=1)
+                #self.motor2.rotate_angle(abs(self.lid_angle), rpm=self.lid_rpm, direction=0)
                 
                 print("Wait until lid is FULLY closed...")
                 self.switch.wait_for_press()
@@ -131,8 +144,37 @@ class Scanner3D:
                 filename = '3d.obj'
                 self.file_writer.write(filename, points, faces)
                 print(f"Mesh saved to {filename}")
-
-                #self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=1)
+                
+                # Run QC Inspection
+                results = self.qc_inspector.inspect(
+                    reference_obj='test_part.obj',
+                    scanned_obj='3d.obj'
+                )
+                
+                # Access results programmatically
+                if results['passes_overall']:
+                    print(f"\n✓ Part accepted - {results['overall_sizing']}")
+                else:
+                    print(f"\n✗ Part rejected - {results['overall_sizing']}")
+                    print(f"  Max error: {results['max_error']:.2f}mm")
+                    
+                    # Show which dimensions failed
+                    for axis in ['x', 'y', 'z']:
+                        if not results['passes'][axis]:
+                            print(f"  {axis.upper()}: {results['sizing'][axis]} by {results['errors'][axis]:.2f}mm")
+                
+                if results['overall_sizing'] == 'OK':
+                    self.relay1.on()
+                    self.relay2.on()
+                elif results['overall_sizing'] == 'UNDERSIZE':
+                    self.relay1.on()
+                    self.relay2.off()
+                elif results['overall_sizing'] == 'OVERSIZE':
+                    self.relay1.off()
+                    self.relay2.on()
+                
+                print("\nOpen Lid")
+                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
 
                 self.green_led.off()
                 print("\nScan complete!\n")

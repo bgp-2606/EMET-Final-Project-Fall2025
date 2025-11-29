@@ -12,12 +12,12 @@ from scipy import ndimage
 class ImageProcessor:
     """Handles camera capture and image processing"""
     def __init__(self):
-        self.tlp = (521.0, 250.0)
-        self.trp = (1205.0, 195.0)
-        self.brp = (1205.0, 790.0)
-        self.blp = (521.0, 845.0)
+        self.tlp = (521.0, 344.0)
+        self.trp = (1205.0, 310.0)
+        self.brp = (1205.0, 771.0)
+        self.blp = (521.0, 815.0)
         self.center_column = 352.0
-        self.height_mm_per_pixel = 0.124602
+        self.height_mm_per_pixel = 0.119069
         self.radial_mm_per_pixel = 0.157199
     
     def capture_image(self, filename='lineDetection.jpg'):
