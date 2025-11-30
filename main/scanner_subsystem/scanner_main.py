@@ -45,17 +45,16 @@ class Scanner3D:
         self.image_processor = ImageProcessor()
         self.mesh_generator = MeshGenerator()
         self.file_writer = OBJFileWriter()
-        self.qc_inspector = QCInspector(tolerance_mm=2.54)
+        self.qc_inspector = QCInspector(tolerance_mm=1.25)
         
         # Scan parameters
         self.angular_resolution =  40 # Number of angles to capture
         self.vertical_resolution = 50  # Number of vertical points per angle
-        self.scan_rpm = 10  # Speed of rotation during scan
+        self.scan_rpm = 20  # Speed of rotation during scan
 
         # Lid open/close parameter
         self.lid_angle = 12288
         self.lid_rpm = 180
-        self.lid_curr_pos = 0
 
     def perform_scan(self):
         """Execute a complete 3D scan"""
@@ -108,11 +107,7 @@ class Scanner3D:
                 # Wait 5 seconds for robot gripper to move away
                 time.sleep(5)
                 
-                print("Close lid...")
-                print(f"Closing lid: {self.lid_angle} steps at {self.lid_rpm} RPM")
-                print(f"With {self.motor2.microstep_multiplier}x microstepping")
-                print(f"This will take approximately {(self.lid_angle / (self.motor2.steps_per_rev * self.motor2.microstep_multiplier)) / self.lid_rpm * 60:.1f} seconds")
-
+                print("Closing lid...")
                 self.motor2.rotate_angle(abs(self.lid_angle), rpm=self.lid_rpm, direction=1)
                 #self.motor2.rotate_angle(abs(self.lid_angle), rpm=self.lid_rpm, direction=0)
                 
@@ -141,14 +136,18 @@ class Scanner3D:
                 print(f"Mesh generated: {len(points)} vertices, {len(faces)} faces")
                 
                 # Save to file
-                filename = '3d.obj'
-                self.file_writer.write(filename, points, faces)
-                print(f"Mesh saved to {filename}")
+                scanned_file = 'scanned.obj'
+                self.file_writer.write(scanned_file, points, faces)
+                print(f"Mesh saved to {scanned_file}")
+                
+                print("\nScan complete!\n")
                 
                 # Run QC Inspection
+                print("\n Comparing reference.obj to scanned.obj")
+                
                 results = self.qc_inspector.inspect(
-                    reference_obj='test_part.obj',
-                    scanned_obj='3d.obj'
+                    reference_obj='reference.obj',
+                    scanned_obj=scanned_file
                 )
                 
                 # Access results programmatically
@@ -157,12 +156,15 @@ class Scanner3D:
                 else:
                     print(f"\n✗ Part rejected - {results['overall_sizing']}")
                     print(f"  Max error: {results['max_error']:.2f}mm")
-                    
-                    # Show which dimensions failed
-                    for axis in ['x', 'y', 'z']:
-                        if not results['passes'][axis]:
-                            print(f"  {axis.upper()}: {results['sizing'][axis]} by {results['errors'][axis]:.2f}mm")
+                # Show which dimensions failed
+                for axis in ['diameter', 'height']:
+                    if not results['passes'][axis]:
+                        print(f"  {axis.upper()}: {results['sizing'][axis]} by {results['errors'][axis]:.2f}mm")
                 
+                print("\nOpening Lid..")
+                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
+                
+                print("\n Send signal to PLC..")
                 if results['overall_sizing'] == 'OK':
                     self.relay1.on()
                     self.relay2.on()
@@ -172,12 +174,9 @@ class Scanner3D:
                 elif results['overall_sizing'] == 'OVERSIZE':
                     self.relay1.off()
                     self.relay2.on()
-                
-                print("\nOpen Lid")
-                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
 
                 self.green_led.off()
-                print("\nScan complete!\n")
+                print("\nQC complete!\n")
                 
         except KeyboardInterrupt:
             print("\n\nShutting down...")

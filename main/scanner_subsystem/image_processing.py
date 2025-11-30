@@ -17,13 +17,14 @@ class ImageProcessor:
         self.brp = (1205.0, 771.0)
         self.blp = (521.0, 815.0)
         self.center_column = 352.0
-        self.height_mm_per_pixel = 0.119069
-        self.radial_mm_per_pixel = 0.157199
+        self.height_mm_per_pixel = 0.114769
+        self.radial_mm_per_pixel = 0.125720
     
     def capture_image(self, filename='lineDetection.jpg'):
         """Capture an image using libcamera-still"""
-        cmd = ["libcamera-still", "-o", filename, "--timeout", "1000",
-               "--autofocus-mode", "manual", "--lens-position", "7.0"]
+        cmd = ["libcamera-still", "-o", filename, "--timeout", "100",
+               "--nopreview", "--autofocus-mode", "manual",
+               "--lens-position", "7.0"]
         subprocess.run(cmd, check=True)
         
         temp_img = cv2.imread(filename)
@@ -43,7 +44,7 @@ class ImageProcessor:
         
         # Extract red channel for additional filtering
         red_channel = img[:, :, 2]
-        _, red_line = cv2.threshold(red_channel, 170, 255, cv2.THRESH_BINARY)
+        _, red_line = cv2.threshold(red_channel, 150, 255, cv2.THRESH_BINARY)
         
         if save_intermediate:
             cv2.imwrite('intermediate_3_red_only.jpg', red_line)
@@ -59,10 +60,10 @@ class ImageProcessor:
             else:
                 detected_cols.append(-1)
                 
-        REMOVE_BOTTOM_ROWS = 15  # Adjust this value
+        REMOVE_BOTTOM_ROWS = 20  # Adjust this value
         for r in range(max(0, h - REMOVE_BOTTOM_ROWS), h):
             detected_cols[r] = -1
-        print(f"Removed bottom {REMOVE_BOTTOM_ROWS} rows (table reflections)")
+        #print(f"Removed bottom {REMOVE_BOTTOM_ROWS} rows (table reflections)")
 
         # Find bottom_row: Use the LOWEST detected point across ALL segments
         # This handles objects with multiple radii that create separate line segments
@@ -83,11 +84,11 @@ class ImageProcessor:
         # Don't forget final sequence
         if current_sequence_start != -1:
             sequences.append((current_sequence_start, h - 1))
-        
+        '''
         print(f"Found {len(sequences)} line segment(s):")
         for i, (start, end) in enumerate(sequences):
             print(f"  Segment {i+1}: rows {start} to {end} (length: {end - start + 1})")
-        
+        '''
         # Strategy 2: Filter out noise (segments shorter than threshold)
         MIN_SEGMENT_LENGTH = 10  # Segments must be at least this many rows
         valid_segments = [(start, end) for start, end in sequences 
@@ -95,40 +96,24 @@ class ImageProcessor:
         
         if len(valid_segments) < len(sequences):
             filtered_count = len(sequences) - len(valid_segments)
-            print(f"  Filtered out {filtered_count} short segment(s) (likely noise)")
+            #print(f"  Filtered out {filtered_count} short segment(s) (likely noise)")
         
         # Strategy 3: Find the LOWEST point among all valid segments
         bottom_row = 0
         if valid_segments:
             # Get the maximum 'end' value (lowest row number)
             bottom_row = max(end for start, end in valid_segments)
-            print(f"Bottom row: {bottom_row} (lowest point across all segments)")
+            #print(f"Bottom row: {bottom_row} (lowest point across all segments)")
         else:
             # Fallback: just use last detected point
             for r in range(h - 1, -1, -1):  # Search from bottom up
                 if detected_cols[r] != -1:
                     bottom_row = r
                     break
-            print(f"Bottom row: {bottom_row} (fallback: last detected point)")
-        
-#         # Strategy 4: Straighten each valid segment by averaging
-#         print("\nStraightening segments:")
-#         for i, (start, end) in enumerate(valid_segments):
-#             # Calculate average column for this segment
-#             segment_cols = [detected_cols[r] for r in range(start, end + 1) 
-#                             if detected_cols[r] != -1]
-#             
-#             if segment_cols:  # Make sure we have valid data
-#                 avg_col = np.mean(segment_cols)
-#                 print(f"  Segment {i+1} (rows {start}-{end}): avg column = {avg_col:.1f}")
-#                 
-#                 # Set all rows in this segment to the average
-#                 for r in range(start, end + 1):
-#                     if detected_cols[r] != -1:
-#                         detected_cols[r] = int(round(avg_col))
+            #print(f"Bottom row: {bottom_row} (fallback: last detected point)")
         
         # Fill gaps between segments
-        print("\nFilling gaps between segments:")
+        #print("\nFilling gaps between segments:")
         for i in range(len(valid_segments) - 1):
             _, current_end = valid_segments[i]
             next_start, _ = valid_segments[i + 1]
@@ -140,12 +125,12 @@ class ImageProcessor:
                 if col_current != -1 and col_next != -1:
                     min_col = int(min(col_current, col_next))
                     max_col = int(max(col_current, col_next))
-                    print(f"  Filling row {next_start}: columns {min_col} to {max_col}")
+                    #print(f"  Filling row {next_start}: columns {min_col} to {max_col}")
 
         
         # Apply Gaussian smoothing to detected columns
-        #smoothed_cols = self.gaussian_smooth_line(detected_cols, valid_segments, sigma=3.0)
-        smoothed_cols = detected_cols
+        smoothed_cols = self.gaussian_smooth_line(detected_cols, valid_segments, sigma=2.0)
+        #smoothed_cols = detected_cols  #for testing without smoothening
         
         # Create backG with smoothed line AND horizontal connectors
         backG = np.zeros((h, w))
@@ -173,7 +158,7 @@ class ImageProcessor:
             cv2.imwrite('intermediate_5_smoothed_line.jpg', backG * 255)
             
             # Create visualization showing detected line with reference lines
-            print("\nCreating visualization...")
+            #print("\nCreating visualization...")
             vis_img = four_point_transform(original_img, pts)
             
             # Draw the detected points on the visualization (green dots)
@@ -191,10 +176,10 @@ class ImageProcessor:
             cv2.line(vis_img, (0, bottom_row), (w, bottom_row), (0, 0, 255), 2)
             
             cv2.imwrite('test_visualization.jpg', vis_img)
-            print(f"✓ Visualization saved to: test_visualization.jpg")
+            '''print(f"✓ Visualization saved to: test_visualization.jpg")
             print(f"  Green dots: detected line points")
             print(f"  Blue line: center column reference")
-            print(f"  Red line: bottom row reference")
+            print(f"  Red line: bottom row reference")'''
             
         return backG, bottom_row
 
@@ -273,7 +258,7 @@ class ImageProcessor:
                         interpolated_col = prev_col + alpha * (next_col - prev_col)
                         smoothed_cols[r] = int(round(interpolated_col))
         
-        print(f"Applied Gaussian smoothing with sigma={sigma}")
+        #print(f"Applied Gaussian smoothing with sigma={sigma}")
         return smoothed_cols
 
     def extract_coordinates(self, processed_img, bottom_row, theta):
@@ -287,14 +272,14 @@ class ImageProcessor:
                 # Convert pixels to millimeters
                 height_px = bottom_row - r
                 dist_px = c_index - self.center_column
-                print(f"HEIGHT_PX {height_px}")
+                #print(f"HEIGHT_PX {height_px}")
                 height_mm = height_px * self.height_mm_per_pixel
                 dist_mm = dist_px * self.radial_mm_per_pixel
                 
                 coords.append(Vertex(height_mm, np.radians(theta), dist_mm))
                 #coords.append(Vertex(height_px, np.radians(theta), dist_px))
         
-        print(f"Extracted {len(coords)} coordinates in mm")
+        #print(f"Extracted {len(coords)} coordinates in mm")
         return coords
 
     def downsample_coordinates(self, coords, vertical_resolution=20):
