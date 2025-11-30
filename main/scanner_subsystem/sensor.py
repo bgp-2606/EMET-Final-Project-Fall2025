@@ -87,7 +87,7 @@ class UltrasonicSensor:
         while True:
             avg_dist = get_average_distance(num_samples)
             if avg_dist is not None:
-                print(f"    Average distance: {avg_dist:.2f} cm")
+                #print(f"    Average distance: {avg_dist:.2f} cm")
                 if avg_dist < close_threshold:
                     print(f"  ✓ Gripper confirmed present!")
                     break
@@ -99,7 +99,7 @@ class UltrasonicSensor:
         while True:
             avg_dist = get_average_distance(num_samples)
             if avg_dist is not None:
-                print(f"    Average distance: {avg_dist:.2f} cm")
+                #print(f"    Average distance: {avg_dist:.2f} cm")
                 if avg_dist > close_threshold:
                     print(f"  ✓ Gripper confirmed retracted!")
                     break

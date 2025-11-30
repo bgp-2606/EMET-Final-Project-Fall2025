@@ -16,7 +16,7 @@ class Scanner3D:
     """Main 3D scanner controller"""
     def __init__(self, dir1_pin=23, step1_pin=24, dir2_pin=25, step2_pin=12, 
                  switch_pin=16, green_led_pin=21, red_led_pin=20,
-                 sensor_trig_pin=17, sensor_echo_pin=27, relay1_pin=5, relay2_pin=6):
+                 sensor_trig_pin=17, sensor_echo_pin=27, relay1_pin=7, relay2_pin=8):
         """
         Initialize 3D scanner
         
@@ -55,6 +55,9 @@ class Scanner3D:
         # Lid open/close parameter
         self.lid_angle = 12288
         self.lid_rpm = 180
+        
+        self.relay1.on()
+        self.relay2.on()
 
     def perform_scan(self):
         """Execute a complete 3D scan"""
@@ -92,9 +95,9 @@ class Scanner3D:
         """Main run loop"""
         try:
             while True:
-                print("Resetting outputs...")
-                self.relay1.off()
-                self.relay2.off()
+                print("Resetting outputs...") #Relay is active low
+                self.relay1.on()
+                self.relay2.on()
                 
                 print("\n" + "="*50)
                 print("3D Scanner Ready")
@@ -165,18 +168,21 @@ class Scanner3D:
                 self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=0)
                 
                 print("\n Send signal to PLC..")
-                if results['overall_sizing'] == 'OK':
-                    self.relay1.on()
-                    self.relay2.on()
-                elif results['overall_sizing'] == 'UNDERSIZE':
-                    self.relay1.on()
-                    self.relay2.off()
-                elif results['overall_sizing'] == 'OVERSIZE':
+                if results['overall_sizing'] == 'UNDERSIZE': # Sending 10 (active-low)
                     self.relay1.off()
                     self.relay2.on()
+                elif results['overall_sizing'] == 'OVERSIZE': # Sending 01 (active-low)
+                    self.relay1.on()
+                    self.relay2.off()
+                else:
+                    self.relay1.off()
+                    self.relay2.off()
 
                 self.green_led.off()
                 print("\nQC complete!\n")
+                
+                # Wait 5 seconds before checking for new part
+                time.sleep(5)
                 
         except KeyboardInterrupt:
             print("\n\nShutting down...")
