@@ -35,12 +35,11 @@ class Scanner3D:
         self.motor1 = StepperMotor(dir1_pin, step1_pin, microstep_multiplier=32)
         self.motor2 = StepperMotor(dir2_pin, step2_pin, microstep_multiplier=1)
         self.switch = Button(switch_pin, bounce_time=0.05)
-        self.sensor = UltrasonicSensor(sensor_trig_pin, sensor_echo_pin, detection_threshold=12.0)
+        self.sensor = UltrasonicSensor(sensor_trig_pin, sensor_echo_pin, detection_threshold=14.0)
         self.green_led = PWMLED(green_led_pin)
         self.red_led = PWMLED(red_led_pin)
         self.relay1 = OutputDevice(relay1_pin)
-        self.relay2 = OutputDevice(relay2_pin)
-        
+        self.relay2 = OutputDevice(relay2_pin)    
         # Processing components
         self.image_processor = ImageProcessor()
         self.mesh_generator = MeshGenerator()
@@ -105,7 +104,11 @@ class Scanner3D:
 
                 print("Place part on scanner table...")
                 # Wait for part
-                self.sensor.wait_for_part_placement()
+                self.sensor.wait_for_part_placement(
+                    confirmations_required=3,   # 3 consecutive confirmations
+                    samples_per_check=7,        # Take 7 samples
+                    outlier_tolerance=0.3       # Reject readings >30% different from median
+                )
                 
                 # Wait 5 seconds for robot gripper to move away
                 time.sleep(5)
@@ -152,6 +155,8 @@ class Scanner3D:
                     reference_obj='reference.obj',
                     scanned_obj=scanned_file
                 )
+                print(f"\nTolerance: {results['tolerance']}")
+                print(f"\nTolerance: {self.qc_inspector.tolerance_mm}")
                 
                 # Access results programmatically
                 if results['passes_overall']:
@@ -182,7 +187,14 @@ class Scanner3D:
                 print("\nQC complete!\n")
                 
                 # Wait 5 seconds before checking for new part
-                time.sleep(5)
+                time.sleep(10)
+                
+                print("Wait 10s for robot to pick up part...")
+                time.sleep(30)
+                
+                print("Assuming part has been picked up..")
+                time.sleep(2)
+                
                 
         except KeyboardInterrupt:
             print("\n\nShutting down...")

@@ -14,11 +14,11 @@ class ImageProcessor:
     def __init__(self):
         self.tlp = (521.0, 344.0)
         self.trp = (1205.0, 310.0)
-        self.brp = (1205.0, 771.0)
-        self.blp = (521.0, 815.0)
-        self.center_column = 352.0
+        self.brp = (1205.0, 801.0)
+        self.blp = (521.0, 845.0)
+        self.center_column = 330.0
         self.height_mm_per_pixel = 0.114769
-        self.radial_mm_per_pixel = 0.125720
+        self.radial_mm_per_pixel = 0.153094
     
     def capture_image(self, filename='lineDetection.jpg'):
         """Capture an image using libcamera-still"""
@@ -298,3 +298,7 @@ class ImageProcessor:
         downsampled.append(coords[-1])
         
         return downsampled
+    
+# imgclass = ImageProcessor()
+# img = imgclass.capture_image()
+# imgclass.process_image(img, save_intermediate=True)

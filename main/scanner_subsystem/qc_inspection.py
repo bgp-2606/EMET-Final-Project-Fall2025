@@ -31,10 +31,10 @@ class QCInspector:
         scan_dims = scan.bounds[1] - scan.bounds[0]
         
         # FOR CYLINDRICAL PARTS: Use average of X and Z for diameter
-        ref_diameter = (ref_dims[0] + ref_dims[2]) / 2
-        scan_diameter = (scan_dims[0] + scan_dims[2]) / 2
-        ref_height = ref_dims[1]
-        scan_height = scan_dims[1]
+        ref_diameter = (ref_dims[0] + ref_dims[1]) / 2
+        scan_diameter = (scan_dims[0] + scan_dims[1]) / 2
+        ref_height = ref_dims[2]
+        scan_height = scan_dims[2]
         
         # Calculate differences for diameter and height only
         diameter_diff = scan_diameter - ref_diameter
