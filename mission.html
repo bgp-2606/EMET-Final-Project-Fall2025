@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission | Automated CNC Lathe Cell</title>
+    <meta name="description" content="Our mission and technical process for the Automated CNC Lathe Production Cell.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">CNC<span class="highlight">Cell</span></div>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="mission.html" class="highlight">Mission</a></li>
+            <li><a href="team.html">Team</a></li>
+        </ul>
+        <div class="hamburger">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+        </div>
+    </nav>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Our Mission & Process</h2>
+                <p>How we are revolutionizing manufacturing</p>
+                <div class="line-accent"></div>
+            </div>
+
+            <div class="process-container">
+                <div class="process-step">
+                    <div class="step-number">01</div>
+                    <div class="step-content">
+                        <h3>Start & Feed</h3>
+                        <p>The <strong>Omron PLC</strong> checks Sensor 1 for material. If present, it signals the
+                            <strong>Arduino Nano</strong> to drive the stepper motor, feeding material until Sensor 2
+                            confirms it's in position.</p>
+                    </div>
+                </div>
+                <div class="process-step">
+                    <div class="step-number">02</div>
+                    <div class="step-content">
+                        <h3>Clamp & Machine</h3>
+                        <p>The PLC engages the <strong>Pneumatic Chuck</strong> (3 single-acting cylinders) to secure
+                            the part. A 10-second machining cycle is simulated.</p>
+                    </div>
+                </div>
+                <div class="process-step">
+                    <div class="step-number">03</div>
+                    <div class="step-content">
+                        <h3>Robot Transfer</h3>
+                        <p>The <strong>Fanuc 200iD Robot</strong> receives a signal to grab the finished part and
+                            transfer it to the inspection station.</p>
+                    </div>
+                </div>
+                <div class="process-step">
+                    <div class="step-number">04</div>
+                    <div class="step-content">
+                        <h3>3D Scan & Sort</h3>
+                        <p>A <strong>Raspberry Pi</strong> controls a line laser and camera to scan the rotating part.
+                            It compares the geometry to the CAD file and tells the PLC to sort the part as Good, Scrap,
+                            or Rework.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gallery-grid">
+                <div class="gallery-item">
+                    <img src="images/production_cell_main.jpg" alt="Full Production Cell">
+                    <div class="caption">Full Automated Cell</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/plc_system.jpg" alt="Omron PLC Control">
+                    <div class="caption">Omron PLC System</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/pneumatics.jpg" alt="Pneumatic System">
+                    <div class="caption">Pneumatic Controls</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/robot_scanning.jpg" alt="Robot and Scanner">
+                    <div class="caption">Robot & Scanner</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Key Features</h2>
+                <p>Intelligent Integration of Hardware and Software</p>
+            </div>
+            <div class="cards-container">
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-microchip"></i></div>
+                    <h3>Omron PLC Control</h3>
+                    <p>The brain of the operation.</p>
+                    <ul class="card-details">
+                        <li>Master Logic Controller</li>
+                        <li>Coordinating Subsystems</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-gears"></i></div>
+                    <h3>Arduino Feeder</h3>
+                    <p>Precision material handling.</p>
+                    <ul class="card-details">
+                        <li>Stepper Motor Drive</li>
+                        <li>Dual Sensor Feedback</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-compress"></i></div>
+                    <h3>Pneumatic Chuck</h3>
+                    <p>Custom aluminum design.</p>
+                    <ul class="card-details">
+                        <li>3 Single-Acting Cylinders</li>
+                        <li>Secure Part Clamping</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-robot"></i></div>
+                    <h3>Fanuc 200iD Robot</h3>
+                    <p>Automated part transfer.</p>
+                    <ul class="card-details">
+                        <li>High-Speed Handling</li>
+                        <li>Intelligent Sorting</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-eye"></i></div>
+                    <h3>Pi 3D Scanner</h3>
+                    <p>Laser triangulation inspection.</p>
+                    <ul class="card-details">
+                        <li>Line Laser + Camera</li>
+                        <li>CAD Comparison</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="images/algonquin_logo.png" alt="Algonquin College">
+                </div>
+                <p>&copy; 2025 Algonquin College Capstone Project. All rights reserved.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
