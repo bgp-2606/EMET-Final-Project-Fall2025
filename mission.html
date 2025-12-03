@@ -17,7 +17,13 @@
 
 <body>
     <nav class="navbar">
-        <div class="logo">CNC<span class="highlight">Cell</span></div>
+        <div class="logo-group">
+            <div class="logo">CNC<span class="highlight">Cell</span></div>
+            <div class="nav-logos">
+                <img src="images/algonquin_logo_nav.png" alt="Algonquin College">
+                <img src="images/icor_logo.png" alt="ICOR Technology">
+            </div>
+        </div>
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
             <li><a href="mission.html" class="highlight">Mission</a></li>
@@ -33,49 +39,126 @@
     <section class="section">
         <div class="container">
             <div class="section-header">
-                <h2>Our Mission & Process</h2>
-                <p>How we are revolutionizing manufacturing</p>
+                <h2>Our Mission</h2>
+                <p>Proof of Concept for ICOR Technology</p>
                 <div class="line-accent"></div>
             </div>
 
-            <div class="process-container">
-                <div class="process-step">
-                    <div class="step-number">01</div>
-                    <div class="step-content">
-                        <h3>Start & Feed</h3>
-                        <p>The <strong>Omron PLC</strong> checks Sensor 1 for material. If present, it signals the
-                            <strong>Arduino Nano</strong> to drive the stepper motor, feeding material until Sensor 2
-                            confirms it's in position.</p>
-                    </div>
+            <div
+                style="max-width: 800px; margin: 0 auto; text-align: center; color: #e0e0e0; line-height: 1.8; margin-bottom: 4rem;">
+                <p>
+                    We are developing a fully automated CNC lathe production cell as a proof of concept for our client,
+                    <strong>ICOR Technology</strong>.
+                    The primary goal is to <strong>reduce inventory costs</strong> by transitioning from batch
+                    manufacturing to on-demand part production.
+                    This system also aims to significantly <strong>reduce Quality Control (QC) costs</strong> and
+                    minimize human intervention, ensuring consistent quality and efficiency.
+                </p>
+            </div>
+
+            <div class="section-header">
+                <h2>Process Flow</h2>
+                <p>From Raw Material to Verified Part</p>
+            </div>
+
+            <div class="flowchart-container">
+                <div class="flow-step">
+                    <i class="fa-solid fa-arrow-right-to-bracket"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Feed Material</h4>
+                    <p>Stepper motor feeds bar stock into position.</p>
                 </div>
-                <div class="process-step">
-                    <div class="step-number">02</div>
-                    <div class="step-content">
-                        <h3>Clamp & Machine</h3>
-                        <p>The PLC engages the <strong>Pneumatic Chuck</strong> (3 single-acting cylinders) to secure
-                            the part. A 10-second machining cycle is simulated.</p>
-                    </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-step">
+                    <i class="fa-solid fa-compress"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Secure & Simulate</h4>
+                    <p>Pneumatic chuck clamps; machining is simulated.</p>
                 </div>
-                <div class="process-step">
-                    <div class="step-number">03</div>
-                    <div class="step-content">
-                        <h3>Robot Transfer</h3>
-                        <p>The <strong>Fanuc 200iD Robot</strong> receives a signal to grab the finished part and
-                            transfer it to the inspection station.</p>
-                    </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-step">
+                    <i class="fa-solid fa-robot"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Robot Transfer</h4>
+                    <p>Fanuc arm moves part to inspection station.</p>
                 </div>
-                <div class="process-step">
-                    <div class="step-number">04</div>
-                    <div class="step-content">
-                        <h3>3D Scan & Sort</h3>
-                        <p>A <strong>Raspberry Pi</strong> controls a line laser and camera to scan the rotating part.
-                            It compares the geometry to the CAD file and tells the PLC to sort the part as Good, Scrap,
-                            or Rework.</p>
-                    </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-step">
+                    <i class="fa-solid fa-eye"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Scan & Verify</h4>
+                    <p>3D scan compares part to CAD file.</p>
                 </div>
             </div>
 
-            <div class="gallery-grid">
+            <div class="section-header" style="margin-top: 6rem;">
+                <h2>Project Subsystems</h2>
+                <p>Engineered for Precision and Automation</p>
+                <div class="line-accent"></div>
+            </div>
+
+            <div class="cards-container">
+                <!-- Feeder Subsystem -->
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-gears"></i></div>
+                    <h3>Feeder Subsystem</h3>
+                    <p>Feeds the raw material bar into the chuck with precision.</p>
+                    <ul class="card-details">
+                        <li><strong>Sensors:</strong> Two sensors (pre-chuck & post-chuck) ensure accurate positioning.
+                        </li>
+                        <li><strong>Actuation:</strong> Stepper motor controlled by an <strong>Arduino Nano</strong>.
+                        </li>
+                        <li><strong>Fixture:</strong> Custom-designed fixtures for the motor and ball rollers to support
+                            the bar.</li>
+                    </ul>
+                </div>
+
+                <!-- Pneumatic Chuck Subsystem -->
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-compress"></i></div>
+                    <h3>Pneumatic Chuck</h3>
+                    <p>Secures the material for the simulated machining process.</p>
+                    <ul class="card-details">
+                        <li><strong>Design:</strong> Custom aluminum frame holding 3 pneumatic cylinders spaced 120°
+                            apart.</li>
+                        <li><strong>Inserts:</strong> Custom-designed rod tip inserts to accommodate various material
+                            sizes.</li>
+                        <li><strong>Simulation:</strong> Cylinders extend to clamp, simulating the machining hold.</li>
+                    </ul>
+                </div>
+
+                <!-- Laser Scanner Subsystem -->
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-eye"></i></div>
+                    <h3>Laser Scanner</h3>
+                    <p>Performs Quality Assurance (QA) by generating a 3D model.</p>
+                    <ul class="card-details">
+                        <li><strong>Hardware:</strong> Line scanner, Raspberry Pi camera, and a rotating base (stepper
+                            motor).</li>
+                        <li><strong>Process:</strong> Part rotates while laser scans; camera captures geometry.</li>
+                        <li><strong>Analysis:</strong> Generates a <strong>.obj file</strong> and compares it to the
+                            reference CAD.</li>
+                        <li><strong>Accuracy:</strong> Achieves a tolerance of <strong>1.25 mm</strong>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 6rem;">
+                <h2>System Integration</h2>
+                <p>Orchestrating the Automation</p>
+            </div>
+
+            <div
+                style="max-width: 800px; margin: 0 auto; text-align: center; color: #ccc; line-height: 1.8; background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 20px;">
+                <p>
+                    These three subsystems work in harmony, coordinated by a <strong>Fanuc 200iD Robot Arm</strong> for
+                    material handling and an <strong>Omron CJ2M PLC</strong> as the master controller. A
+                    <strong>Raspberry Pi 4</strong> handles the complex image processing and data analysis for the QA
+                    process.
+                </p>
+            </div>
+
+            <div class="gallery-grid" style="margin-top: 4rem;">
                 <div class="gallery-item">
                     <img src="images/production_cell_main.jpg" alt="Full Production Cell">
                     <div class="caption">Full Automated Cell</div>
@@ -91,62 +174,6 @@
                 <div class="gallery-item">
                     <img src="images/robot_scanning.jpg" alt="Robot and Scanner">
                     <div class="caption">Robot & Scanner</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Key Features</h2>
-                <p>Intelligent Integration of Hardware and Software</p>
-            </div>
-            <div class="cards-container">
-                <div class="card">
-                    <div class="card-icon"><i class="fa-solid fa-microchip"></i></div>
-                    <h3>Omron PLC Control</h3>
-                    <p>The brain of the operation.</p>
-                    <ul class="card-details">
-                        <li>Master Logic Controller</li>
-                        <li>Coordinating Subsystems</li>
-                    </ul>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class="fa-solid fa-gears"></i></div>
-                    <h3>Arduino Feeder</h3>
-                    <p>Precision material handling.</p>
-                    <ul class="card-details">
-                        <li>Stepper Motor Drive</li>
-                        <li>Dual Sensor Feedback</li>
-                    </ul>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class="fa-solid fa-compress"></i></div>
-                    <h3>Pneumatic Chuck</h3>
-                    <p>Custom aluminum design.</p>
-                    <ul class="card-details">
-                        <li>3 Single-Acting Cylinders</li>
-                        <li>Secure Part Clamping</li>
-                    </ul>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class="fa-solid fa-robot"></i></div>
-                    <h3>Fanuc 200iD Robot</h3>
-                    <p>Automated part transfer.</p>
-                    <ul class="card-details">
-                        <li>High-Speed Handling</li>
-                        <li>Intelligent Sorting</li>
-                    </ul>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class="fa-solid fa-eye"></i></div>
-                    <h3>Pi 3D Scanner</h3>
-                    <p>Laser triangulation inspection.</p>
-                    <ul class="card-details">
-                        <li>Line Laser + Camera</li>
-                        <li>CAD Comparison</li>
-                    </ul>
                 </div>
             </div>
         </div>

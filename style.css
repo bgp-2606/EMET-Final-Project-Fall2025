@@ -27,12 +27,6 @@ body {
     line-height: 1.6;
 }
 
-/* Custom Cursor - Hidden */
-.cursor-dot,
-.cursor-outline {
-    display: none;
-}
-
 /* Typography */
 h1,
 h2,
@@ -446,6 +440,47 @@ h6 {
     background: linear-gradient(to top, rgba(17, 0, 34, 0.9), transparent);
     padding: 1rem;
     font-family: var(--font-heading);
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    color: #fff;
+}
+
+/* Flowchart Styles */
+.flowchart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin: 4rem 0;
+    position: relative;
+}
+
+.flow-step {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    width: 200px;
+    position: relative;
+}
+
+.flow-step h4 {
+    color: var(--accent-cyan);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.flow-step p {
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.flow-arrow {
+    color: var(--accent-pink);
+    font-size: 1.5rem;
 }
 
 /* Footer */
@@ -464,7 +499,8 @@ footer {
 }
 
 .footer-logo img {
-    height: 60px;
+    height: 100px;
+    /* Increased size as requested */
     filter: brightness(0) invert(1);
 }
 
@@ -480,7 +516,6 @@ footer {
     text-decoration: none;
     transition: color 0.3s;
 }
-
 
 .footer-links a:hover {
     color: #fff;
@@ -506,5 +541,13 @@ footer {
 
     .hamburger {
         display: block;
+    }
+
+    .flowchart-container {
+        flex-direction: column;
+    }
+
+    .flow-arrow {
+        transform: rotate(90deg);
     }
 }
