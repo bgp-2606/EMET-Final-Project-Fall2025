@@ -52,7 +52,7 @@ class Scanner3D:
         self.scan_rpm = 20  # Speed of rotation during scan
 
         # Lid open/close parameter
-        self.lid_angle = 12288
+        self.lid_angle = 10240
         self.lid_rpm = 180
         
         self.relay1.on()
@@ -114,7 +114,7 @@ class Scanner3D:
                 time.sleep(5)
                 
                 print("Closing lid...")
-                self.motor2.rotate_angle(abs(self.lid_angle), rpm=self.lid_rpm, direction=1)
+                self.motor2.rotate_angle(self.lid_angle, rpm=self.lid_rpm, direction=1)
                 #self.motor2.rotate_angle(abs(self.lid_angle), rpm=self.lid_rpm, direction=0)
                 
                 print("Wait until lid is FULLY closed...")
