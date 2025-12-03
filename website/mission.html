@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission | Automated CNC Lathe Cell</title>
+    <meta name="description" content="Our mission and technical process for the Automated CNC Lathe Production Cell.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo-group">
+            <div class="logo">CNC<span class="highlight">Cell</span></div>
+            <div class="nav-logos">
+                <img src="images/algonquin_logo_nav.png" alt="Algonquin College">
+                <img src="images/icor_logo.png" alt="ICOR Technology">
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="mission.html" class="highlight">Mission</a></li>
+            <li><a href="team.html">Team</a></li>
+        </ul>
+        <div class="hamburger">
+            <div class="line"></div>
+            <div class="line"></div>
+            <div class="line"></div>
+        </div>
+    </nav>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Our Mission</h2>
+                <p>Proof of Concept for ICOR Technology</p>
+                <div class="line-accent"></div>
+            </div>
+
+            <div
+                style="max-width: 800px; margin: 0 auto; text-align: center; color: #e0e0e0; line-height: 1.8; margin-bottom: 4rem;">
+                <p>
+                    We are developing a fully automated CNC lathe production cell as a proof of concept for our client,
+                    <strong>ICOR Technology</strong>.
+                    The primary goal is to <strong>reduce inventory costs</strong> by transitioning from batch
+                    manufacturing to on-demand part production.
+                    This system also aims to significantly <strong>reduce Quality Control (QC) costs</strong> and
+                    minimize human intervention, ensuring consistent quality and efficiency.
+                </p>
+            </div>
+
+            <div class="section-header">
+                <h2>Process Flow</h2>
+                <p>From Raw Material to Verified Part</p>
+            </div>
+
+            <div class="flowchart-container">
+                <div class="flow-step">
+                    <i class="fa-solid fa-arrow-right-to-bracket"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Feed Material</h4>
+                    <p>Stepper motor feeds bar stock into position.</p>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-step">
+                    <i class="fa-solid fa-compress"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Secure & Simulate</h4>
+                    <p>Pneumatic chuck clamps; machining is simulated.</p>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-step">
+                    <i class="fa-solid fa-robot"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Robot Transfer</h4>
+                    <p>Fanuc arm moves part to inspection station.</p>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="flow-step">
+                    <i class="fa-solid fa-eye"
+                        style="color: var(--accent-pink); font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <h4>Scan & Verify</h4>
+                    <p>3D scan compares part to CAD file.</p>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 6rem;">
+                <h2>Project Subsystems</h2>
+                <p>Engineered for Precision and Automation</p>
+                <div class="line-accent"></div>
+            </div>
+
+            <div class="cards-container">
+                <!-- Feeder Subsystem -->
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-gears"></i></div>
+                    <h3>Feeder Subsystem</h3>
+                    <p>Feeds the raw material bar into the chuck with precision.</p>
+                    <ul class="card-details">
+                        <li><strong>Sensors:</strong> Two sensors (pre-chuck & post-chuck) ensure accurate positioning.
+                        </li>
+                        <li><strong>Actuation:</strong> Stepper motor controlled by an <strong>Arduino Nano</strong>.
+                        </li>
+                        <li><strong>Fixture:</strong> Custom-designed fixtures for the motor and ball rollers to support
+                            the bar.</li>
+                    </ul>
+                </div>
+
+                <!-- Pneumatic Chuck Subsystem -->
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-compress"></i></div>
+                    <h3>Pneumatic Chuck</h3>
+                    <p>Secures the material for the simulated machining process.</p>
+                    <ul class="card-details">
+                        <li><strong>Design:</strong> Custom aluminum frame holding 3 pneumatic cylinders spaced 120°
+                            apart.</li>
+                        <li><strong>Inserts:</strong> Custom-designed rod tip inserts to accommodate various material
+                            sizes.</li>
+                        <li><strong>Simulation:</strong> Cylinders extend to clamp, simulating the machining hold.</li>
+                    </ul>
+                </div>
+
+                <!-- Laser Scanner Subsystem -->
+                <div class="card">
+                    <div class="card-icon"><i class="fa-solid fa-eye"></i></div>
+                    <h3>Laser Scanner</h3>
+                    <p>Performs Quality Assurance (QA) by generating a 3D model.</p>
+                    <ul class="card-details">
+                        <li><strong>Hardware:</strong> Line scanner, Raspberry Pi camera, and a rotating base (stepper
+                            motor).</li>
+                        <li><strong>Process:</strong> Part rotates while laser scans; camera captures geometry.</li>
+                        <li><strong>Analysis:</strong> Generates a <strong>.obj file</strong> and compares it to the
+                            reference CAD.</li>
+                        <li><strong>Accuracy:</strong> Achieves a tolerance of <strong>1.25 mm</strong>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 6rem;">
+                <h2>System Integration</h2>
+                <p>Orchestrating the Automation</p>
+            </div>
+
+            <div
+                style="max-width: 800px; margin: 0 auto; text-align: center; color: #ccc; line-height: 1.8; background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 20px;">
+                <p>
+                    These three subsystems work in harmony, coordinated by a <strong>Fanuc 200iD Robot Arm</strong> for
+                    material handling and an <strong>Omron CJ2M PLC</strong> as the master controller. A
+                    <strong>Raspberry Pi 4</strong> handles the complex image processing and data analysis for the QA
+                    process.
+                </p>
+            </div>
+
+            <div class="gallery-grid" style="margin-top: 4rem;">
+                <div class="gallery-item">
+                    <img src="images/production_cell_main.jpg" alt="Full Production Cell">
+                    <div class="caption">Full Automated Cell</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/plc_system.jpg" alt="Omron PLC Control">
+                    <div class="caption">Omron PLC System</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/pneumatics.jpg" alt="Pneumatic System">
+                    <div class="caption">Pneumatic Controls</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/robot_scanning.jpg" alt="Robot and Scanner">
+                    <div class="caption">Robot & Scanner</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="images/algonquin_logo.png" alt="Algonquin College">
+                </div>
+                <p>&copy; 2025 Algonquin College Capstone Project. All rights reserved.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

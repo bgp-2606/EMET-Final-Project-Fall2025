@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Bookmark Print Layout</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Print Settings */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #f0f0f0;
+            font-family: 'Open Sans', sans-serif;
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .bookmark-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .bookmark {
+            width: 200px;
+            height: 800px;
+            background: #110022;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid #333;
+        }
+
+        /* Front Side */
+        .front {
+            background: linear-gradient(180deg, #110022 0%, #1a0033 100%);
+        }
+
+        .front-content {
+            padding: 25px 15px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .logo-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .logo-area img {
+            height: 25px;
+            width: auto;
+        }
+
+        .logo-area img:first-child {
+            filter: none;
+        }
+
+        .logo-area img:last-child {
+            filter: brightness(0) invert(1);
+        }
+
+        .title-block h1 {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.6rem;
+            line-height: 1.1;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .project-image {
+            width: 100%;
+            margin: 12px 0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .project-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .highlight {
+            background: linear-gradient(45deg, #d9008d, #00b8a9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .client-info-front {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 0;
+            margin: 8px 0;
+            width: 100%;
+        }
+
+        .client-label {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00b8a9;
+            margin-bottom: 4px;
+        }
+
+        .client-name {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .description {
+            font-size: 0.75rem;
+            color: #e0e0e0;
+            line-height: 1.3;
+            margin-bottom: 15px;
+        }
+
+        .qr-section {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .qr-text {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            color: #d9008d;
+            font-weight: 600;
+        }
+
+        .qr-code {
+            background: #fff;
+            width: 100px;
+            height: 100px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Back Side */
+        .back {
+            background: linear-gradient(135deg, #fdfbf5 0%, #d4f1f4 100%);
+            color: #1a0b2e;
+        }
+
+        .back-content {
+            padding: 30px 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .school-info {
+            margin-bottom: 15px;
+            border-bottom: 2px solid #00b8a9;
+            padding-bottom: 10px;
+            width: 100%;
+        }
+
+        .school-info h3 {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #1a0b2e;
+            font-weight: 700;
+        }
+
+        .school-dept {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 2px;
+        }
+
+        .program-name {
+            font-size: 0.75rem;
+            color: #fff;
+            font-weight: 700;
+            background: #00843D;
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+        }
+
+        .program-desc {
+            font-size: 0.7rem;
+            color: #555;
+            line-height: 1.3;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .team-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .team-member {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .headshot {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: #eee;
+            margin-bottom: 5px;
+            object-fit: cover;
+            border: 2px solid #00843D;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #00843D;
+            font-size: 0.8rem;
+        }
+
+        .member-name {
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+            color: #1a0b2e;
+        }
+
+        .member-role {
+            font-size: 0.65rem;
+            color: #666;
+            line-height: 1.2;
+            max-width: 160px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bookmark-container">
+        <!-- Front Side -->
+        <div class="bookmark front">
+            <div class="front-content">
+                <div class="logo-area">
+                    <img src="images/algonquin_logo_nav.png" alt="Algonquin College">
+                    <img src="images/icor_logo.png" alt="ICOR Technology">
+                </div>
+
+                <div class="title-block">
+                    <h1>Automated <br><span class="highlight">CNC Lathe</span><br> Cell</h1>
+                </div>
+
+                <div class="project-image">
+                    <img src="images/project_diagram.jpg" alt="Project Diagram">
+                </div>
+
+                <div class="client-info-front">
+                    <p class="client-label">In Collaboration With</p>
+                    <h2 class="client-name">ICOR Technology</h2>
+                </div>
+
+                <p class="description">
+                    An automated production cell designed to reduce inventory costs and enable on-demand manufacturing.
+                </p>
+
+                <div class="qr-section">
+                    <p class="qr-text">Scan for more info</p>
+                    <div class="qr-code">
+                        <!-- Placeholder QR Code - Replace with final URL -->
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://example.com"
+                            alt="QR Code">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Side -->
+        <div class="bookmark back">
+            <div class="back-content">
+                <div class="school-info">
+                    <h3>Algonquin College</h3>
+                    <p class="school-dept">School of Advanced Technology (SAT)</p>
+                    <p class="program-name">Electromechanical Engineering Technician</p>
+                </div>
+
+                <p class="program-desc">
+                    Students learn to build and troubleshoot electrical systems, design electro-pneumatic circuits, and
+                    explore industrial robotics and mechatronics.
+                </p>
+
+                <div class="team-list">
+                    <div class="team-member">
+                        <div class="headshot">JP</div>
+                        <div class="member-name">Jino Rafael Palanca</div>
+                        <div class="member-role">Mechanical Design & Robot Integration Lead</div>
+                    </div>
+                    <div class="team-member">
+                        <img src="images/allaa_headshot.jpg" alt="Allaa" class="headshot">
+                        <div class="member-name">Allaa Eddine Ikhlef</div>
+                        <div class="member-role">Automation & Control Lead</div>
+                    </div>
+                    <div class="team-member">
+                        <img src="images/bren_headshot.jpg" alt="Bren" class="headshot">
+                        <div class="member-name">Bren Gelyn Padlan</div>
+                        <div class="member-role">Software & Vision System Lead</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
