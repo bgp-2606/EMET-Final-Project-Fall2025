@@ -44,7 +44,7 @@ class Scanner3D:
         self.image_processor = ImageProcessor()
         self.mesh_generator = MeshGenerator()
         self.file_writer = OBJFileWriter()
-        self.qc_inspector = QCInspector(tolerance_mm=1.25)
+        self.qc_inspector = QCInspector(tolerance_mm=1.00)
         
         # Scan parameters
         self.angular_resolution =  40 # Number of angles to capture
